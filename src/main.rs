@@ -1,81 +1,64 @@
-use std::collections::HashMap;
-
-#[derive(PartialEq, Debug)]
-struct Car { color: String, motor: Transmission, roof: bool, age: (Age, u32) }
-
-#[derive(PartialEq, Debug)]
-enum Transmission { Manual, SemiAuto, Automatic }
-
-#[derive(PartialEq, Debug)]
-enum Age { New, Used }
-
-// Get the car quality by testing the value of the input argument
-// - miles (u32)
-// Return tuple with car age ("New" or "Used") and mileage
-fn car_quality (miles: u32) -> (Age, u32) {
-
-    // Check if car has accumulated miles
-    // Return tuple early for Used car
-    if miles > 0 {
-        return (Age::Used, miles);
-    }
-
-    // Return tuple for New car, no need for "return" keyword or semicolon
-    (Age::New, miles)
+struct Groups<T> {
+    inner: Vec<T>,
 }
 
-// Build "Car" using input arguments
-fn car_factory(order: i32, miles: u32) -> Car {
-    let colors = ["Blue", "Green", "Red", "Silver"];
-
-    // Prevent panic: Check color index for colors array, reset as needed
-    // Valid color = 1, 2, 3, or 4
-    // If color > 4, reduce color to valid index
-    let mut color = order as usize;
-
-    while color > 4 {
-        color = color - 4;
+impl<T> Groups<T> {
+    fn new(inner: Vec<T>) -> Self {
+	    Groups { inner }
     }
+}
 
-    // Add variety to orders for motor type and roof type
-    let mut motor = Transmission::Manual;
-    let mut roof = true;
-    if order % 3 == 0 {          // 3, 6, 9
-        motor = Transmission::Automatic;
-    } else if order % 2 == 0 {   // 2, 4, 8, 10
-        motor = Transmission::SemiAuto;
-        roof = false;
-    }                            // 1, 5, 7, 11
+impl<T: PartialEq> Iterator for Groups<T> {
+    type Item = Vec<T>;
 
-    // Return requested "Car"
-    Car {
-        color: String::from(colors[(color-1) as usize]),
-        motor: motor,
-        roof: roof,
-        age: car_quality(miles)
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.inner.is_empty() {
+            return None;
+        }
+
+        let mut cursor = 1;
+        let first = &self.inner[0];
+        for element in &self.inner[1..] {
+            if element == first {
+                cursor += 1;
+            } else {
+                break;
+            }
+        }
+
+        let items = self.inner.drain(0..cursor).collect();
+        Some(items)
     }
 }
 
 fn main() {
-    let mut orders: HashMap<i32, Car> = HashMap::new();
-    let mut car: Car;
-    // Start with zero miles
-    let mut miles = 0;
+    let data = vec![4, 1, 1, 2, 1, 3, 3, -2, -2, -2, 5, 5];
+    // groups:     |->|---->|->|->|--->|----------->|--->|
+    assert_eq!(
+	    Groups::new(data).into_iter().collect::<Vec<Vec<_>>>(),
+	    vec![
+	        vec![4],
+    	    vec![1, 1],
+	        vec![2],
+    	    vec![1],
+	        vec![3, 3],
+	        vec![-2, -2, -2],
+    	    vec![5, 5],
+	    ]
+    );
 
-        // Call car_factory to fulfill order
-        // Add order <K, V> pair to "orders" hash map
-        // Call println! to show order details from the hash map     
-
-        for order in 1..12{
-            car = car_factory(order, miles);
-            orders.insert(order, car);
-            println!("Car order {}: {:?}", order, orders.get(&order));
-            // Reset miles for order variety
-            if miles == 2100 {
-                miles = 0;
-            } else {
-                miles = miles + 700;
-            }
-        }
-
+    let data2 = vec![1, 2, 2, 1, 1, 2, 2, 3, 4, 4, 3];
+    // groups:      |->|---->|---->|----|->|----->|->|
+    assert_eq!(
+	    Groups::new(data2).into_iter().collect::<Vec<Vec<_>>>(),
+	    vec![
+	        vec![1],
+    	    vec![2, 2],
+	        vec![1, 1],
+	        vec![2, 2],
+    	    vec![3],
+	        vec![4, 4],
+	        vec![3],
+	    ]
+    )
 }
